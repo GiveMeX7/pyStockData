@@ -54,11 +54,17 @@ class fetch7:
 		if len(urlData) == 1:
 			exit()
 		urlData = u'1101' + urlData[1]
+		urlData = string.split(urlData, u'漲跌符號')
 
-		b = StringIO(urlData.encode('utf-8'))
+		b = StringIO(urlData[0].encode('utf-8'))
 		r = csv.reader(b, delimiter=',', quotechar='"')
 		for row in r:
-		    print row
+			try:
+				if ((float(row[8]) > float(row[5]) and
+					((float(row[8]) / float(row[5])) > 1.065))):
+					print "Get " + row[0] + " " + row[1]
+			except:
+			  	print "Except: " + row[5] + " " + row[8]
 
 #
 # Test case
