@@ -19,6 +19,7 @@ import sys
 import string
 
 from datetime import date
+from datetime import timedelta
 import urllib
 import urllib2
 from StringIO import StringIO
@@ -28,14 +29,14 @@ class fetch7:
 	def __init__(self):
 		pass
 
-	def fetch_TW(self):
-		today = date.today()
+	def fetch_TW(self, thedate):
+		# TODO: check type(thedate)
 		csvFile = 'http://www.twse.com.tw/ch/trading/exchange/MI_INDEX/MI_INDEX3_print.php?genpage=genpage/Report'
-		csvFile += str(today.year) + str(today.month).zfill(2) + '/A112'
-		csvFile += str(today.year) + str(today.month).zfill(2) + str(today.day).zfill(2) + 'ALL_1.php&type=csv'
+		csvFile += str(thedate.year) + str(thedate.month).zfill(2) + '/A112'
+		csvFile += str(thedate.year) + str(thedate.month).zfill(2) + str(thedate.day).zfill(2) + 'ALL_1.php&type=csv'
 
 		#print csvFile
-		csvFile = 'http://www.twse.com.tw/ch/trading/exchange/MI_INDEX/MI_INDEX3_print.php?genpage=genpage/Report201408/A11220140826ALL_1.php&type=csv'
+		#csvFile = 'http://www.twse.com.tw/ch/trading/exchange/MI_INDEX/MI_INDEX3_print.php?genpage=genpage/Report201409/A11220140903ALL_1.php&type=csv'
 
 		the_page = urllib.urlopen(csvFile).read()
 		if len(the_page) == 0:
@@ -50,19 +51,24 @@ class fetch7:
 		# 1101,     台泥,     "11,137,634", "4,308",  "539,339,150", 49.55,  49.55,  48.10,  48.30,  －,        1.25,     48.25,        62,           48.30,        130,          16.15
 		# ...
 		# 漲跌符號說明:[+ ->漲][- ->跌][X ->不比價]
-		urlData = string.split(uthe_page, u'1101')
+		urlData = string.split(uthe_page, u'1101,台泥')
 		if len(urlData) == 1:
-			exit()
-		urlData = u'1101' + urlData[1]
+			return
+		urlData = u'1101,台泥' + urlData[1]
 		urlData = string.split(urlData, u'漲跌符號')
 
 		b = StringIO(urlData[0].encode('utf-8'))
 		r = csv.reader(b, delimiter=',', quotechar='"')
 		for row in r:
+			if row[5] == '--' or row[8] == '--':
+				# No transaction
+				continue
+			open = float(row[5].replace(',',''))
+			close = float(row[8].replace(',',''))
 			try:
-				if ((float(row[8]) > float(row[5]) and
-					((float(row[8]) / float(row[5])) > 1.065))):
-					print "Get " + row[0] + " " + row[1]
+				if ((close > open) and
+					((close / open) > 1.065)):
+					print row[0] + " " + row[1].decode('utf-8').encode('big5') + ": " + str(int((close / open - 1) * 10000) / 100.0) + '%'
 			except:
 			  	print "Except: " + row[5] + " " + row[8]
 
@@ -72,7 +78,11 @@ class fetch7:
 
 def main(argv=None):
 	t = fetch7()
-	t.fetch_TW()
+	today = date.today()
+	for x in range(1, 8):
+		thedate = today - timedelta(days=x)
+		print thedate
+		t.fetch_TW(thedate)
 
 if __name__ == '__main__':
 	sys.exit(main())
